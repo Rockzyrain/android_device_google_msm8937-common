@@ -1,0 +1,35 @@
+on enable-low-power
+    start qcom-post-boot
+
+    write /proc/sys/vm/page-cluster 0
+    write /proc/sys/vm/swappiness 60
+    swapon_all /vendor/etc/fstab.qcom
+
+    # Work against lineage-governor.rc
+    chown root root /dev/cpuctl/cpu.notify_on_migrate
+
+on charger
+    # Offline all cores other than CPU0
+    write /sys/devices/system/cpu/cpu1/online 0
+    write /sys/devices/system/cpu/cpu2/online 0
+    write /sys/devices/system/cpu/cpu3/online 0
+    write /sys/devices/system/cpu/cpu4/online 0
+    write /sys/devices/system/cpu/cpu5/online 0
+    write /sys/devices/system/cpu/cpu6/online 0
+    write /sys/devices/system/cpu/cpu7/online 0
+
+    write /sys/module/lpm_levels/parameters/sleep_disabled 0
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor powersave
+
+service qcom-post-boot /vendor/bin/init.qcom.post_boot.sh
+    class late_start
+    user root
+    disabled
+    oneshot
+
+on property:init.svc.recovery=running
+    trigger enable-low-power
+
+on property:sys.boot_completed=1
+    trigger enable-low-power
+    setprop sys.io.scheduler cfq
